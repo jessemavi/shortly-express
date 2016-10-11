@@ -31,7 +31,6 @@ app.use(session({
 
 app.get('/', 
 function(req, res) {
-  console.log('GET HOMEPAGE WITH USER', req.session);
   if (req.session.user) {
     res.render('index'); 
   } else {
@@ -52,12 +51,12 @@ function(req, res) {
 
 app.get('/links', 
 function(req, res) {
+  console.log(req.session.user);
   if (req.session.user) {
     Links.reset().fetch().then(function(links) {
       res.status(200).send(links.models);
     });
   } else {
-    console.log('first');
     req.session.error = 'Access to Links Denied';
     res.redirect('/login');
   }
@@ -68,7 +67,7 @@ function(req, res) {
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
-    console.log('Not a valid url: ', uri);
+    console.error('Not a valid url: ', uri);
     return res.sendStatus(404);
   }
 
@@ -78,7 +77,7 @@ function(req, res) {
     } else {
       util.getUrlTitle(uri, function(err, title) {
         if (err) {
-          console.log('Error reading URL heading: ', err);
+          console.error('Error reading URL heading: ', err);
           return res.sendStatus(404);
         }
 
@@ -102,28 +101,70 @@ app.get('/login', function(req, res) {
   res.render('login');
 });
 
+//TODO: make secure
 app.post('/login', function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
-  console.log('logging in', req.body.username, req.body.password);
-
-  if (username === 'Phillip' && password === 'Phillip') {
-    console.log('Success');
-    console.log(req.session);
-    req.session.regenerate(function() {
-      req.session.user = username;
-      req.session.save(function(err) {
-        console.log(req.session);
-        res.redirect('/');
+  var hashword;
+  db.knex.select().from('users').where('username', username)
+  .then(function(userInfo) {
+    //console.log('SELECTING FOR', username);
+    //console.log('SENSITIVE USER INFORMATION:', userInfo);
+    if (userInfo.length !== 0 && password === userInfo[0].password) {
+      req.session.regenerate(function() {
+        req.session.user = username;
+        req.session.save(function(err) {
+          res.redirect('/');
+        });
       });
-    });
-  } else {
-    res.redirect('/login');
-  }
-
+    } else {
+      res.redirect('/login');
+    }
+  })
+  .catch(function(err) {
+    console.error(err);
+  });
 });
 
+app.get('/signup', function(req, res) {
+  console.log('rendering signup');
+  res.render('signup');
+});
 
+//TODO: make secure
+app.post('/signup', function(req, res) {
+  console.log(req.body.username, req.body.password);
+  var username = req.body.username;
+  var password = req.body.password;
+  db.knex.select().from('users').where('username', username)
+  .then(function(userInfo) {
+    console.log('SELECTING FOR:', username);
+    console.log('SENSITIVE INFO:', userInfo);
+    if (userInfo.length !== 0) {
+      console.log('problem with redirecting signup');
+      res.redirect('/signup');
+    } else {
+
+      new User({
+        'username': username,
+        'password': password
+      })
+      .save()
+      .then(function() {
+        req.session.regenerate(function() {
+          req.session.user = username;
+          req.session.save(function(err) {
+            res.redirect('/');
+          });
+        });
+      });
+
+    }
+  })
+  .catch(function(err) {
+    console.error('ERROR:', err);
+  });
+});
 
 
 /************************************************************/
@@ -151,5 +192,4 @@ app.get('/*', function(req, res) {
   });
 });
 
-console.log('Shortly is listening on 4568');
 app.listen(4568);
