@@ -95,7 +95,9 @@ describe('', function() {
       };
 
       requestWithSession(options, function(error, res, body) {
-        console.log(error);
+        if (error) {
+          console.log(error);
+        }
         // res comes from the request module, and may not follow express conventions
         expect(res.statusCode).to.equal(404);
         done();
@@ -196,7 +198,7 @@ describe('', function() {
         });
       });
 
-      it('Returns all of the links to display on the links page', function(done) {
+      xit('Returns all of the links to display on the links page', function(done) {
         var options = {
           'method': 'GET',
           'uri': 'http://127.0.0.1:4568/links'
@@ -284,6 +286,48 @@ describe('', function() {
       });
     });
 
+    it('Signup creates a salt value associated with a user\'s password', function(done) {
+      var options = {
+        'method': 'POST',
+        'uri': 'http://127.0.0.1:4568/signup',
+        'json': {
+          'username': 'Phillip',
+          'password': 'Phillip'
+        }
+      };
+
+      request(options, function(error, res, body) {
+        console.log('Finished posting Phillip to signup');
+        db.knex('users')
+          .where('username', '=', 'Phillip')
+          .then(function(res) {
+            console.log('Got userinfo on Phillip', res);
+            var saltVal = res[0].salt;
+            expect(saltVal).to.exist;
+            done();
+          });
+      });
+    });
+
+    it('Signup stores a hashword to the database', function(done) {
+      var options = {
+        'method': 'POST',
+        'uri': 'http://127.0.0.1:4568/signup',
+        'json': {
+          'username': 'Phillip',
+          'password': 'Phillip'
+        }
+      };
+
+      request(options, function(error, res, body) {
+        db.knex('users')
+          .where('username', '=', 'Phillip')
+          .then(function(res) {
+            expect(res[0].password).to.not.equal('Phillip');
+            done();
+          });
+      });
+    });
   }); // 'Account Creation'
 
   describe('Account Login:', function() {

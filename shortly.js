@@ -136,15 +136,14 @@ app.post('/signup', function(req, res) {
   console.log(req.body.username, req.body.password);
   var username = req.body.username;
   var password = req.body.password;
+  var salt =  
   db.knex.select().from('users').where('username', username)
   .then(function(userInfo) {
-    console.log('SELECTING FOR:', username);
-    console.log('SENSITIVE INFO:', userInfo);
     if (userInfo.length !== 0) {
-      console.log('problem with redirecting signup');
+      console.log('Username: ' + username + ' already exists!');
       res.redirect('/signup');
     } else {
-
+      
       new User({
         'username': username,
         'password': password
@@ -166,6 +165,11 @@ app.post('/signup', function(req, res) {
   });
 });
 
+app.get('/logout', function(req, res) {
+  req.session.destroy(function() {
+    res.redirect('/login');
+  });
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
@@ -192,4 +196,5 @@ app.get('/*', function(req, res) {
   });
 });
 
+console.log('Shortly listening to 4568');
 app.listen(4568);
