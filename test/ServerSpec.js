@@ -63,7 +63,7 @@ describe('', function() {
 
     var requestWithSession = request.defaults({jar: true});
 
-    xbeforeEach(function(done) {
+    beforeEach(function(done) {
       // create a user that we can then log-in with
       new User({
         'username': 'Phillip',
@@ -95,6 +95,7 @@ describe('', function() {
       };
 
       requestWithSession(options, function(error, res, body) {
+        console.log(error);
         // res comes from the request module, and may not follow express conventions
         expect(res.statusCode).to.equal(404);
         done();
@@ -155,18 +156,38 @@ describe('', function() {
       var link;
 
       beforeEach(function(done) {
-        // save a link to the database
-        link = new Link({
-          url: 'http://roflzoo.com/',
-          title: 'Funny pictures of animals, funny dog pictures',
-          baseUrl: 'http://127.0.0.1:4568'
-        });
-        link.save().then(function() {
-          done();
+
+        new User({
+          'username': 'Phillip',
+          'password': 'Phillip'
+        }).save().then(function() {
+          var options = {
+            'method': 'POST',
+            'followAllRedirects': true,
+            'uri': 'http://127.0.0.1:4568/login',
+            'json': {
+              'username': 'Phillip',
+              'password': 'Phillip'
+            }
+          };
+          // login via form and save session info
+          requestWithSession(options, function(error, res, body) {
+            //done();
+            // save a link to the database
+
+            link = new Link({
+              url: 'http://roflzoo.com/',
+              title: 'Funny pictures of animals, funny dog pictures',
+              baseUrl: 'http://127.0.0.1:4568'
+            });
+            link.save().then(function() {
+              done();
+            });
+          });
         });
       });
 
-      it('Returns the same shortened code', function(done) {
+      xit('Returns the same shortened code', function(done) {
         var options = {
           'method': 'POST',
           'followAllRedirects': true,
@@ -213,23 +234,23 @@ describe('', function() {
 
   }); // 'Link creation'
 
-  xdescribe('Privileged Access:', function() {
+  describe('Privileged Access:', function() {
 
-    it('Redirects to login page if a user tries to access the main page and is not signed in', function(done) {
+    it('1)Redirects to login page if a user tries to access the main page and is not signed in', function(done) {
       request('http://127.0.0.1:4568/', function(error, res, body) {
         expect(res.req.path).to.equal('/login');
         done();
       });
     });
 
-    it('Redirects to login page if a user tries to create a link and is not signed in', function(done) {
+    it('2)Redirects to login page if a user tries to create a link and is not signed in', function(done) {
       request('http://127.0.0.1:4568/create', function(error, res, body) {
         expect(res.req.path).to.equal('/login');
         done();
       });
     });
 
-    it('Redirects to login page if a user tries to see all of the links and is not signed in', function(done) {
+    it('3)Redirects to login page if a user tries to see all of the links and is not signed in', function(done) {
       request('http://127.0.0.1:4568/links', function(error, res, body) {
         expect(res.req.path).to.equal('/login');
         done();
@@ -238,7 +259,7 @@ describe('', function() {
 
   }); // 'Priviledged Access'
 
-  xdescribe('Account Creation:', function() {
+  describe('Account Creation:', function() {
 
     it('Signup creates a user record', function(done) {
       var options = {
